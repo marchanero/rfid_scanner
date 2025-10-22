@@ -1,59 +1,160 @@
-# rfid_i2c
+# RFID Reader for MERN Stack 🚀
 
-Proyecto PlatformIO para Wemos D1 mini (ESP8266) con lector RFID RC522 HW-126 (clon) conectado por SPI. Incluye diagnósticos avanzados y reconstrucción manual de UIDs para compatibilidad con módulos clones.
+[![GitHub stars](https://img.shields.io/github/stars/marchanero/rfid_scanner?style=social)](https://github.com/marchanero/rfid_scanner)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-arduino-orange)](https://platformio.org/)
 
-## Características
+Proyecto optimizado para integrar un lector RFID RC522 (HW-126 clon) con Wemos D1 mini en aplicaciones MERN (MongoDB, Express, React, Node.js). Envía UIDs de tarjetas MIFARE por puerto serial en formato JSON para fácil parsing en el backend.
 
-- Lectura de tarjetas MIFARE Classic (UIDs) usando MFRC522 SPI.
-- Diagnósticos integrados: volcado de registros, pruebas REQA, anticollision cruda.
-- Reconstrucción automática de UID desde anticollision cuando la función estándar falla (común en clones HW-126).
-- Soporte para clones MFRC522 con firmware no estándar (ej. VersionReg 0xB2).
-- Librería: `makerspaceleiden/rfid` (compatible con clones).
+## ✨ Características
 
-## Contenido
+- 🔍 **Lectura precisa de UIDs**: Compatible con tarjetas MIFARE Classic, con fallback a anticollision cruda para clones.
+- 📡 **Integración serial**: Salida JSON limpia para Node.js (`serialport`).
+- 🛠️ **Optimizado para producción**: Código minimalista (~60 líneas), sin logs verbosos.
+- 🔧 **Soporte clones**: Maneja firmwares no estándar (ej. VersionReg 0xB2) con reconstrucción manual de UIDs.
+- ⚡ **Bajo consumo**: Inicialización rápida, loop eficiente.
 
-- `platformio.ini` - Configuración PlatformIO (board: d1_mini, framework: arduino, lib_deps: makerspaceleiden/rfid).
-- `src/main.cpp` - Sketch principal con inicialización SPI, diagnósticos y loop de lectura.
-- `README.md` - Esta documentación.
+## 📦 Instalación
 
-## Conexiones (Wemos D1 mini / RC522 HW-126 SPI)
+### Requisitos
 
-- 3.3V -> VCC
-- GND -> GND
-- D2 (GPIO4) -> SS (Chip Select)
-- D1 (GPIO5) -> RST
-- D7 (GPIO13) -> MOSI
-- D6 (GPIO12) -> MISO
-- D5 (GPIO14) -> SCK
+- [PlatformIO](https://platformio.org/) (IDE recomendado).
+- Wemos D1 mini (ESP8266).
+- Módulo RFID RC522 HW-126 (SPI).
+- Tarjetas MIFARE Classic para testing.
 
-## Notas Importantes
+### Setup del Proyecto
 
-- El módulo HW-126 es un clon SPI-only; no soporta I2C.
-- Pines SPI fijos en ESP8266: D5=SCK, D6=MISO, D7=MOSI; SS/RST configurables.
-- Si no lee tarjetas: Verifica jumpers en SPI, conecta antena externa (la integrada es débil), acerca tarjeta a 1-2 cm, usa tarjetas MIFARE Classic.
-- Problema común en clones: `PICC_ReadCardSerial()` falla, pero REQA/anticollision funcionan. El código reconstruye UID manualmente.
-- Firmware clon: VersionReg ~0xB2 (no estándar); auto-prueba puede fallar, pero SPI responde.
+1. Clona el repo:
 
-## Cómo Flashear (PlatformIO)
+   ```bash
+   git clone https://github.com/marchanero/rfid_scanner.git
+   cd rfid_scanner
+   ```
 
-1. Conecta Wemos D1 mini via USB.
-2. Desde la carpeta del proyecto:
+2. Instala dependencias:
+
+   ```bash
+   pio install
+   ```
+
+3. Flashea el firmware:
+
+   ```bash
+   pio run -t upload -e d1_mini
+   ```
+
+4. Monitor serie:
+
+   ```bash
+   pio device monitor -e d1_mini
+   ```
+
+## 🔌 Conexiones Hardware
+
+| Wemos D1 mini | RC522 HW-126 | Descripción |
+|---------------|--------------|-------------|
+| 3.3V         | VCC          | Alimentación |
+| GND          | GND          | Tierra común |
+| D2 (GPIO4)   | SS           | Chip Select |
+| D1 (GPIO5)   | RST          | Reset |
+| D7 (GPIO13)  | MOSI         | SPI Data Out |
+| D6 (GPIO12)  | MISO         | SPI Data In |
+| D5 (GPIO14)  | SCK          | SPI Clock |
+
+> **Nota**: Pines SPI son fijos en ESP8266. Verifica jumpers del módulo en modo SPI.
+
+## 🚀 Uso
+
+### Salida Serial (JSON)
+
+El dispositivo envía mensajes JSON por serial (115200 baudios):
+
+- **Ready**: `{"event":"ready"}` (inicialización exitosa).
+- **Error**: `{"event":"error","message":"RC522 init failed"}` (fallo de init).
+- **Card Detected**: `{"event":"card_detected","uid":"32B8FA05"}` (UID en hex mayúscula).
+
+### Integración con MERN (Node.js Backend)
+
+Instala `serialport`:
 
 ```bash
-pio run -t upload -e d1_mini
+npm install serialport
 ```
 
-3. Abrir monitor serie (115200 baudios):
+Ejemplo de código en `server.js`:
 
-```bash
-pio device monitor -e d1_mini
+```javascript
+const SerialPort = require('serialport');
+const port = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
+
+port.on('data', (data) => {
+  const line = data.toString().trim();
+  if (line.startsWith('{')) {
+    const event = JSON.parse(line);
+    if (event.event === 'card_detected') {
+      console.log('UID detectado:', event.uid);
+      // Guardar en MongoDB, enviar a React via Socket.io, etc.
+    }
+  }
+});
 ```
 
-## Salida Esperada en Monitor Serie
+### React Frontend (Ejemplo)
 
-- Inicialización: "RC522 inicializado correctamente.", Firmware Version, volcado registros.
-- Diagnósticos: REQA Status, combinaciones TX forzadas.
-- Lectura: "PICC_IsNewCardPresent: SI", luego UID reconstruido (ej. "Card UID: 32 B8 FA 05").
-- Si falla: Volcado ErrorReg/ComIrq/FIFO, REQA/anticollision para debug.
+Usa WebSocket/Socket.io para recibir UIDs del backend y actualizar UI.
 
-Si hay problemas (compilación o no lee), envía logs del compilador y salida serie para revisión.
+## 🛠️ API Serial
+
+| Evento          | Payload                          | Descripción |
+|-----------------|----------------------------------|-------------|
+| `ready`        | `{}`                            | Dispositivo listo |
+| `error`        | `{"message": "string"}`         | Error de inicialización |
+| `card_detected`| `{"uid": "HEXSTRING"}`          | UID detectado (4 bytes hex) |
+
+## 🔧 Troubleshooting
+
+### No detecta tarjetas
+
+- Verifica conexiones SPI (multímetro para continuidad).
+- Acerca tarjeta a 1-2 cm del módulo.
+- Conecta antena externa si la integrada falla.
+- Firmware clon: Si VersionReg es 0xB2, es normal; el código maneja clones.
+
+### Errores comunes
+
+- **Init failed**: Verifica alimentación 3.3V estable, no 5V.
+- **No JSON output**: Revisa baud rate (115200), puerto serial correcto.
+- **UIDs inconsistentes**: Clones pueden requerir antena externa.
+
+### Debug avanzado
+
+Si el código optimizado no funciona, usa la rama `main` con diagnósticos para logs detallados.
+
+## 📁 Estructura del Proyecto
+
+```text
+rfid_scanner/
+├── platformio.ini          # Config PlatformIO
+├── src/
+│   └── main.cpp            # Sketch ESP8266
+├── include/                # Headers (si aplica)
+├── lib/                    # Librerías locales
+└── README.md               # Esta doc
+```
+
+## 🤝 Contribuir
+
+1. Fork el repo.
+2. Crea una rama: `git checkout -b feature/nueva-funcion`.
+3. Commit: `git commit -m 'Agrega nueva funcion'`.
+4. Push: `git push origin feature/nueva-funcion`.
+5. Abre un PR.
+
+## 📄 Licencia
+
+MIT License - ver [LICENSE](LICENSE) para detalles.
+
+---
+
+Hecho con ❤️ para proyectos IoT y RFID. ¡Issues y PRs bienvenidos!
