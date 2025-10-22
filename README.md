@@ -37,3 +37,4 @@ pio device monitor -e d1_mini
 ```
 
 Si hay problemas de compilación o el lector no responde, envíame el log del compilador y la salida serie y lo reviso.
+# rfid_scanner
