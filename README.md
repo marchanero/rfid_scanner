@@ -1,4 +1,4 @@
-# RFID Reader for MERN Stack 🚀
+# RFID Reader for Galgo School APP 🚀
 
 [![GitHub stars](https://img.shields.io/github/stars/marchanero/rfid_scanner?style=social)](https://github.com/marchanero/rfid_scanner)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
