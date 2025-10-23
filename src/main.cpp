@@ -35,7 +35,8 @@ void setup() {
   if (version == 0x00 || version == 0xFF) {
     Serial.println("{\"event\":\"error\",\"type\":\"init_failure\",\"message\":\"RC522 communication failed\"}");
   } else {
-    Serial.printf("{\"event\":\"init\",\"status\":\"success\",\"version\":\"0x%02X\"}\n", version);
+    String json = "{\"event\":\"init\",\"status\":\"success\",\"version\":\"0x" + String(version, HEX) + "\"}";
+    Serial.println(json);
   }
 }
 
@@ -48,7 +49,8 @@ void loop() {
 
   // Heartbeat cada 10 segundos
   if (millis() - lastHeartbeat > 10000) {
-    Serial.printf("{\"event\":\"status\",\"uptime\":%lu,\"cards_detected\":%d,\"free_heap\":%d}\n", millis(), cardsDetected, ESP.getFreeHeap());
+    String json = "{\"event\":\"status\",\"uptime\":" + String(millis()) + ",\"cards_detected\":" + String(cardsDetected) + ",\"free_heap\":" + String(ESP.getFreeHeap()) + "}";
+    Serial.println(json);
     lastHeartbeat = millis();
   }
 
@@ -75,7 +77,8 @@ void loop() {
         uidStr += String(mfrc522.uid.uidByte[i], HEX);
       }
       // Enviar info detallada de tarjeta
-      Serial.printf("{\"event\":\"card_detected\",\"uid\":\"%s\",\"type\":\"%s\",\"size\":%d}\n", uidStr.c_str(), mfrc522.PICC_GetTypeName(piccType), mfrc522.uid.size);
+      String json = "{\"event\":\"card_detected\",\"uid\":\"" + uidStr + "\",\"type\":\"" + String(mfrc522.PICC_GetTypeName(piccType)) + "\",\"size\":" + String(mfrc522.uid.size) + "}";
+      Serial.println(json);
 
       lastUid = uidStr;
       cardPresentFlag = true;
@@ -109,7 +112,8 @@ void loop() {
           uidStr += String(mfrc522.uid.uidByte[i], HEX);
         }
         // Enviar UID reconstruido con info básica
-        Serial.printf("{\"event\":\"card_detected\",\"uid\":\"%s\",\"type\":\"Unknown\",\"size\":%d}\n", uidStr.c_str(), mfrc522.uid.size);
+        String json = "{\"event\":\"card_detected\",\"uid\":\"" + uidStr + "\",\"type\":\"Unknown\",\"size\":" + String(mfrc522.uid.size) + "}";
+        Serial.println(json);
 
         lastUid = uidStr;
         cardPresentFlag = true;
@@ -120,13 +124,15 @@ void loop() {
         mfrc522.PCD_StopCrypto1();
         delay(500);
       } else {
-        Serial.printf("{\"event\":\"error\",\"type\":\"read_failure\",\"message\":\"Anticollision failed, status: %d\"}\n", st);
+        String json = "{\"event\":\"error\",\"type\":\"read_failure\",\"message\":\"Anticollision failed, status: " + String(st) + "\"}";
+        Serial.println(json);
       }
     }
   } else {
     noDetectCount++;
     if (noDetectCount > 10 && cardPresentFlag) {
-      Serial.printf("{\"event\":\"card_removed\",\"uid\":\"%s\"}\n", lastUid.c_str());
+      String json = "{\"event\":\"card_removed\",\"uid\":\"" + lastUid + "\"}";
+      Serial.println(json);
       cardPresentFlag = false;
       lastUid = "";
     }
