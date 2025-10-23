@@ -13,7 +13,6 @@ Proyecto optimizado para integrar un lector RFID RC522 (HW-126 clon) con Wemos D
 - 🛠️ **Optimizado para producción**: Código minimalista (~60 líneas), sin logs verbosos.
 - 🔧 **Soporte clones**: Maneja firmwares no estándar (ej. VersionReg 0xB2) con reconstrucción manual de UIDs.
 - ⚡ **Bajo consumo**: Inicialización rápida, loop eficiente, gain de antena optimizado (38dB).
-- 💡 **Indicador LED**: LED builtin enciende 500ms al detectar tarjeta.
 
 ## 📦 Instalación
 
