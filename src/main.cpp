@@ -33,17 +33,30 @@ void setup() {
 
   byte version = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
   if (version == 0x00 || version == 0xFF) {
-    Serial.println("{\"event\":\"error\",\"message\":\"RC522 init failed\"}");
+    Serial.println("{\"event\":\"error\",\"type\":\"init_failure\",\"message\":\"RC522 communication failed\"}");
   } else {
-    Serial.println("{\"event\":\"ready\"}");
+    Serial.printf("{\"event\":\"init\",\"status\":\"success\",\"version\":\"0x%02X\"}\n", version);
   }
 }
 
 void loop() {
+  static bool cardPresentFlag = false;
+  static String lastUid = "";
+  static unsigned long lastHeartbeat = 0;
+  static int cardsDetected = 0;
+  static int noDetectCount = 0;
+
+  // Heartbeat cada 10 segundos
+  if (millis() - lastHeartbeat > 10000) {
+    Serial.printf("{\"event\":\"status\",\"uptime\":%lu,\"cards_detected\":%d,\"free_heap\":%d}\n", millis(), cardsDetected, ESP.getFreeHeap());
+    lastHeartbeat = millis();
+  }
+
   // Check for new cards
   bool cardPresent = mfrc522.PICC_IsNewCardPresent();
 
   if (cardPresent) {
+    noDetectCount = 0;
     // Intentar leer UID con reintentos cortos (algunos clones requieren varios intentos)
     bool readSerial = false;
     const int maxAttempts = 3;
@@ -54,13 +67,19 @@ void loop() {
     }
 
     if (readSerial) {
-      // Enviar UID en formato JSON para fácil parsing en backend
-      Serial.print("{\"event\":\"card_detected\",\"uid\":\"");
+      // Obtener tipo de PICC
+      MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
+      String uidStr = "";
       for (byte i = 0; i < mfrc522.uid.size; i++) {
-        if (mfrc522.uid.uidByte[i] < 0x10) Serial.print("0");
-        Serial.print(mfrc522.uid.uidByte[i], HEX);
+        if (mfrc522.uid.uidByte[i] < 0x10) uidStr += "0";
+        uidStr += String(mfrc522.uid.uidByte[i], HEX);
       }
-      Serial.println("\"}");
+      // Enviar info detallada de tarjeta
+      Serial.printf("{\"event\":\"card_detected\",\"uid\":\"%s\",\"type\":\"%s\",\"size\":%d}\n", uidStr.c_str(), mfrc522.PICC_GetTypeName(piccType), mfrc522.uid.size);
+
+      lastUid = uidStr;
+      cardPresentFlag = true;
+      cardsDetected++;
 
       // Halt PICC
       mfrc522.PICC_HaltA();
@@ -84,21 +103,33 @@ void loop() {
         mfrc522.uid.size = 4;
         mfrc522.uid.sak = 0x08;
 
-        // Enviar UID reconstruido en JSON
-        Serial.print("{\"event\":\"card_detected\",\"uid\":\"");
+        String uidStr = "";
         for (byte i = 0; i < mfrc522.uid.size; i++) {
-          if (mfrc522.uid.uidByte[i] < 0x10) Serial.print("0");
-          Serial.print(mfrc522.uid.uidByte[i], HEX);
+          if (mfrc522.uid.uidByte[i] < 0x10) uidStr += "0";
+          uidStr += String(mfrc522.uid.uidByte[i], HEX);
         }
-        Serial.println("\"}");
+        // Enviar UID reconstruido con info básica
+        Serial.printf("{\"event\":\"card_detected\",\"uid\":\"%s\",\"type\":\"Unknown\",\"size\":%d}\n", uidStr.c_str(), mfrc522.uid.size);
+
+        lastUid = uidStr;
+        cardPresentFlag = true;
+        cardsDetected++;
 
         // Halt PICC
         mfrc522.PICC_HaltA();
         mfrc522.PCD_StopCrypto1();
         delay(500);
+      } else {
+        Serial.printf("{\"event\":\"error\",\"type\":\"read_failure\",\"message\":\"Anticollision failed, status: %d\"}\n", st);
       }
     }
   } else {
+    noDetectCount++;
+    if (noDetectCount > 10 && cardPresentFlag) {
+      Serial.printf("{\"event\":\"card_removed\",\"uid\":\"%s\"}\n", lastUid.c_str());
+      cardPresentFlag = false;
+      lastUid = "";
+    }
     delay(100);
   }
 }
