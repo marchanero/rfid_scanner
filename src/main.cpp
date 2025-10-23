@@ -12,7 +12,8 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
-  delay(100);
+  delay(2000); // Esperar a que pase el ruido de boot del ESP8266
+  Serial.println("RFID Scanner v1.0 - Ready for MERN integration");
 
   SPI.begin();
   pinMode(SS_PIN, OUTPUT);
