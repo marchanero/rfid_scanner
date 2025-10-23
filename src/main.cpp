@@ -4,8 +4,9 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-#define RST_PIN   2   // GPIO2 (D4)
+#define RST_PIN   0   // GPIO0 (D3)
 #define SS_PIN    15  // GPIO15 (D8)
+#define LED_PIN   2   // GPIO2 (D4) - LED builtin
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
@@ -16,8 +17,10 @@ void setup() {
   SPI.begin();
   pinMode(SS_PIN, OUTPUT);
   pinMode(RST_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   digitalWrite(SS_PIN, HIGH);
   digitalWrite(RST_PIN, HIGH);
+  digitalWrite(LED_PIN, HIGH); // LED apagado (activo bajo)
 
   // Hardware reset for clones
   digitalWrite(RST_PIN, LOW);
@@ -60,6 +63,11 @@ void loop() {
       }
       Serial.println("\"}");
 
+      // Indicar detección con LED
+      digitalWrite(LED_PIN, LOW); // Encender LED
+      delay(500);
+      digitalWrite(LED_PIN, HIGH); // Apagar LED
+
       // Halt PICC
       mfrc522.PICC_HaltA();
       // Stop encryption on PCD
@@ -89,6 +97,11 @@ void loop() {
           Serial.print(mfrc522.uid.uidByte[i], HEX);
         }
         Serial.println("\"}");
+
+        // Indicar detección con LED
+        digitalWrite(LED_PIN, LOW); // Encender LED
+        delay(500);
+        digitalWrite(LED_PIN, HIGH); // Apagar LED
 
         // Halt PICC
         mfrc522.PICC_HaltA();
