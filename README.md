@@ -70,11 +70,13 @@ Proyecto optimizado para integrar un lector RFID RC522 (HW-126 clon) con Wemos D
 
 ### Salida Serial (JSON)
 
-El dispositivo envía mensajes JSON por serial (115200 baudios):
+El dispositivo envía mensajes JSON por serial (115200 baudios) para monitoreo completo:
 
-- **Ready**: `{"event":"ready"}` (inicialización exitosa).
-- **Error**: `{"event":"error","message":"RC522 init failed"}` (fallo de init).
-- **Card Detected**: `{"event":"card_detected","uid":"32B8FA05"}` (UID en hex mayúscula).
+- **Init**: `{"event":"init","status":"success","version":"0xB2"}` (inicialización con versión del chip).
+- **Error**: `{"event":"error","type":"init_failure","message":"RC522 communication failed"}` (errores detallados).
+- **Card Detected**: `{"event":"card_detected","uid":"32B8FA05","type":"MIFARE 1KB","size":4}` (UID, tipo y tamaño).
+- **Card Removed**: `{"event":"card_removed","uid":"32B8FA05"}` (cuando la tarjeta se aleja).
+- **Status (Heartbeat)**: `{"event":"status","uptime":12345,"cards_detected":5,"free_heap":20480}` (cada 10s, estado del dispositivo).
 
 ### Integración con MERN (Node.js Backend)
 
@@ -93,10 +95,28 @@ const port = new SerialPort('/dev/ttyUSB0', { baudRate: 115200 });
 port.on('data', (data) => {
   const line = data.toString().trim();
   if (line.startsWith('{')) {
-    const event = JSON.parse(line);
-    if (event.event === 'card_detected') {
-      console.log('UID detectado:', event.uid);
-      // Guardar en MongoDB, enviar a React via Socket.io, etc.
+    try {
+      const event = JSON.parse(line);
+      switch (event.event) {
+        case 'init':
+          console.log('RC522 inicializado:', event.status, 'Versión:', event.version);
+          break;
+        case 'card_detected':
+          console.log('Tarjeta detectada:', event.uid, 'Tipo:', event.type, 'Tamaño:', event.size);
+          // Guardar en MongoDB, enviar a React via Socket.io
+          break;
+        case 'card_removed':
+          console.log('Tarjeta removida:', event.uid);
+          break;
+        case 'status':
+          console.log('Heartbeat - Uptime:', event.uptime, 'Tarjetas:', event.cards_detected, 'Heap libre:', event.free_heap);
+          break;
+        case 'error':
+          console.error('Error:', event.type, event.message);
+          break;
+      }
+    } catch (e) {
+      console.error('Error parsing JSON:', line);
     }
   }
 });
@@ -110,9 +130,11 @@ Usa WebSocket/Socket.io para recibir UIDs del backend y actualizar UI.
 
 | Evento          | Payload                          | Descripción |
 |-----------------|----------------------------------|-------------|
-| `ready`        | `{}`                            | Dispositivo listo |
-| `error`        | `{"message": "string"}`         | Error de inicialización |
-| `card_detected`| `{"uid": "HEXSTRING"}`          | UID detectado (4 bytes hex) |
+| `init`         | `{"status": "success/fail", "version": "0xXX"}` | Inicialización del RC522 |
+| `error`        | `{"type": "string", "message": "string"}` | Errores (init, read, etc.) |
+| `card_detected`| `{"uid": "HEXSTRING", "type": "string", "size": int}` | Tarjeta detectada con detalles |
+| `card_removed` | `{"uid": "HEXSTRING"}` | Tarjeta removida |
+| `status`       | `{"uptime": int, "cards_detected": int, "free_heap": int}` | Heartbeat periódico (10s) |
 
 ## 🔧 Troubleshooting
 
