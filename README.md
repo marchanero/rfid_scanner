@@ -8,11 +8,11 @@ Proyecto optimizado para integrar un lector RFID RC522 (HW-126 clon) con Wemos D
 
 ## ✨ Características
 
-- 🔍 **Lectura precisa de UIDs**: Compatible con tarjetas MIFARE Classic, con fallback a anticollision cruda para clones.
+- 🔍 **Lectura precisa de UIDs**: Compatible con tarjetas MIFARE Classic, NTAG (botones azules, pegatinas), con fallback a anticollision cruda para clones.
 - 📡 **Integración serial**: Salida JSON limpia para Node.js (`serialport`).
 - 🛠️ **Optimizado para producción**: Código minimalista (~60 líneas), sin logs verbosos.
 - 🔧 **Soporte clones**: Maneja firmwares no estándar (ej. VersionReg 0xB2) con reconstrucción manual de UIDs.
-- ⚡ **Bajo consumo**: Inicialización rápida, loop eficiente.
+- ⚡ **Bajo consumo**: Inicialización rápida, loop eficiente, gain de antena optimizado (38dB).
 
 ## 📦 Instalación
 
@@ -37,6 +37,8 @@ Proyecto optimizado para integrar un lector RFID RC522 (HW-126 clon) con Wemos D
    ```bash
    pio install
    ```
+
+   > **Nota**: El proyecto usa la librería estándar `miguelbalboa/MFRC522` para compatibilidad con NTAG y clones HW-126.
 
 3. Flashea el firmware:
 
@@ -120,6 +122,7 @@ Usa WebSocket/Socket.io para recibir UIDs del backend y actualizar UI.
 - Acerca tarjeta a 1-2 cm del módulo.
 - Conecta antena externa si la integrada falla.
 - Firmware clon: Si VersionReg es 0xB2, es normal; el código maneja clones.
+- Para botones azules (NTAG) y pegatinas: Asegúrate de usar la librería estándar MFRC522; gain ajustado a 38dB mejora detección de tags pequeños.
 
 ### Errores comunes
 
