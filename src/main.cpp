@@ -7,8 +7,7 @@
 #define RST_PIN   2   // GPIO2 (D4)
 #define SS_PIN    15  // GPIO15 (D8)
 
-MFRC522_SPI spiDev(SS_PIN, RST_PIN, &SPI, SPISettings(1000000, MSBFIRST, SPI_MODE0));
-MFRC522 mfrc522(&spiDev);
+MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
@@ -28,7 +27,7 @@ void setup() {
 
   mfrc522.PCD_Init();
   mfrc522.PCD_AntennaOn();
-  mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+  mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_38dB);
 
   byte version = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
   if (version == 0x00 || version == 0xFF) {
@@ -98,6 +97,6 @@ void loop() {
       }
     }
   } else {
-    delay(500);
+    delay(100);
   }
 }
