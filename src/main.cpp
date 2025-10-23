@@ -4,7 +4,7 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-#define RST_PIN   0   // GPIO0 (D3)
+#define RST_PIN   5   // GPIO5 (D1)
 #define SS_PIN    15  // GPIO15 (D8)
 #define LED_PIN   2   // GPIO2 (D4) - LED builtin
 
@@ -73,7 +73,7 @@ void loop() {
       // Stop encryption on PCD
       mfrc522.PCD_StopCrypto1();
 
-      delay(2000); // Pausa antes de buscar otra
+      delay(500); // Pausa corta antes de buscar otra
     }
     else {
       // Si falla PICC_ReadCardSerial, intentar anticollision crudo
@@ -106,7 +106,7 @@ void loop() {
         // Halt PICC
         mfrc522.PICC_HaltA();
         mfrc522.PCD_StopCrypto1();
-        delay(2000);
+        delay(500);
       }
     }
   } else {
